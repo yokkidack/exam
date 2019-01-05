@@ -164,6 +164,81 @@ for (std::list<int>::const_iterator it = C.begin(),end = C.end(); it != end; ++i
 1) Лекция 2 от Бородина (Все что нужно описано)
 2) Джосаттис, глава 5, раздел 2 "Интеллектуальные указатели" (Тут все подробно, даже слишком подробно, но даже разобраны подводные камни)
 + http://alenacpp.blogspot.com/2016/02/c.html в копилку
+
+```
+
+Несколько интересных свойств умных указателей в C++
+Об этом полезно знать при использовании умных указателей в С++:
+
+У shared_ptr есть конструктор, который позволяет создавать зависимости между shared_ptr'ами. (std::shared_ptr's secret constructor  by Anthony Williams) 
+Допустим, я хочу создать указатель на объект типа Y, py, который является членом экземпляра класса X, px. Мне нужно, чтобы px не удалялся, пока я не закончу работать с py.
+
+
+
+void bar(){
+    std::shared_ptr<X> px(std::make_shared<X>());
+    std::shared_ptr<Y> py(px,&px->y);
+    store_for_later(py);
+} // our X object is kept alive
+
+
+
+unique_ptr не такой уж и уникальный. (unique_ptr–How Unique is it? by Bartosz Milewski)
+
+void f(Foo * pf) {
+    globalFoo = pf; // creates a global alias
+}
+
+unique_ptr<Foo> pFoo(new Foo());
+f(pFoo.get()); // leaks an alias
+
+
+Передача shared_ptr по значению - дорогое удовольствие. (The Real Price of Shared Pointers in C++ by Nico Josuttis)
+При передаче по значению происходит его копирование и к его внутреннему счетчику прибавляется единица, это нужно сделать атомарно, что влияет на производительность. Передавайте его по ссылке, где возможно.
+
+
+Зачем нужен scoped_ptr, если есть shared_ptr. (shared_ptr vs scoped_ptr)
+shared_ptr "тяжелее" чем scoped_ptr, потому что он гарантирует корректную работу  в многопоточных программах. Поэтому, если вы работаете с одним указателем, и вам просто нужно автоматически освободить память из-под него, лучше использовать scoped_ptr.
+
+
+Чтобы корректно возвращать shared_ptr на this надо использовать enable_shared_from_this. (std::enable_shared_from_this на cppreference.com)
+Пример с  cppreference.com демонстрирует что случится, если вы не используете enable_shared_from_this.
+
+
+#include <memory>
+#include <iostream>
+
+struct Good: std::enable_shared_from_this<Good>
+{
+    std::shared_ptr<Good> getptr() {
+        return shared_from_this();
+    }
+};
+ 
+struct Bad
+{
+    std::shared_ptr<Bad> getptr() {
+        return std::shared_ptr<Bad>(this);
+    }
+    ~Bad() { std::cout << "Bad::~Bad() called\n"; }
+};
+ 
+int main()
+{
+    // Good: the two shared_ptr's share the same object
+    std::shared_ptr<Good> gp1(new Good);
+    std::shared_ptr<Good> gp2 = gp1->getptr();
+    std::cout << "gp2.use_count() = " << gp2.use_count() << '\n';
+ 
+    // Bad, each shared_ptr thinks it's the only owner of the object
+    std::shared_ptr<Bad> bp1(new Bad);
+    std::shared_ptr<Bad> bp2 = bp1->getptr();
+    std::cout << "bp2.use_count() = " << bp2.use_count() << '\n';
+} // UB: double-delete of Bad
+
+
+```
+
 + https://habr.com/post/140222/ кратко и понятно
 
 ```
