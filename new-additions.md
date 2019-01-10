@@ -19,7 +19,7 @@
     }
     ```
 i получает внутреннее связывание и, следовательно, проблемы с ODR не будет.
-
+- - [namespace](http://www.c-cpp.ru/books/ispolzovanie-prostranstva-imen)
 - - size_t `count`(It p, It q, const T &x)
     Возвращает, сколько раз элемент со значением x входит в последовательность, заданную итераторами p и q.
 - - size_t `count_if`(It p, It q, Pr pred)
